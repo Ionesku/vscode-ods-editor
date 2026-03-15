@@ -26,7 +26,14 @@
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\(''''scripts'''',{}\\), indent=2\\)\\)\")",
       "Bash(npx vsce:*)",
       "Bash(code --install-extension \"c:/Users/Артём/excel/ods-editor-0.1.0.vsix\")",
-      "Bash(wc -l /c/Users/Артём/excel/src/**/*.ts /c/Users/Артём/excel/webview/**/*.ts)"
+      "Bash(wc -l /c/Users/Артём/excel/src/**/*.ts /c/Users/Артём/excel/webview/**/*.ts)",
+      "Bash(code --install-extension \"C:/Users/Артём/excel/ods-editor-0.1.0.vsix\" --force)",
+      "Bash(wc -l /c/Users/Артём/excel/src/**/*.ts)",
+      "Bash(wc -l /c/Users/Артём/excel/webview/**/*.ts)",
+      "Bash(wc -l /c/Users/Артём/excel/test/**/*.ts)",
+      "Bash(find /c/Users/Артём/excel/test -name \"*.ts\" -exec wc -l {} +)",
+      "Bash(grep -h \"registry\\\\.register\" /c/Users/Артём/excel/src/formula/functions/*.ts)",
+      "Bash(code --install-extension \"C:\\\\Users\\\\Артём\\\\excel\\\\ods-editor-0.1.0.vsix\" --force)"
     ]
   }
 }

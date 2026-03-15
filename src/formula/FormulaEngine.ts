@@ -20,6 +20,11 @@ export class FormulaEngine {
     this.registry = createDefaultRegistry();
   }
 
+  /** Returns all registered function names (sorted), useful for autocomplete */
+  getFunctionNames(): string[] {
+    return this.registry.getAllNames();
+  }
+
   /** True if any formula in the model uses a volatile function (RAND, NOW, TODAY…) */
   hasVolatileCells(): boolean {
     return this.volatileCells.length > 0;

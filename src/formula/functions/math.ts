@@ -298,6 +298,87 @@ export function registerMathFunctions(registry: FunctionRegistry): void {
     return found ? product : 0;
   });
 
+  registry.register('COUNT', (args) => {
+    let count = 0;
+    for (const arg of args) {
+      const values = flattenRange(arg);
+      for (const v of values) {
+        if (typeof v === 'number') count++;
+      }
+    }
+    return count;
+  });
+
+  registry.register('COUNTA', (args) => {
+    let count = 0;
+    for (const arg of args) {
+      const values = flattenRange(arg);
+      for (const v of values) {
+        if (v !== null && v !== undefined && v !== '') count++;
+      }
+    }
+    return count;
+  });
+
+  registry.register('COUNTBLANK', (args) => {
+    let count = 0;
+    for (const arg of args) {
+      const values = flattenRange(arg);
+      for (const v of values) {
+        if (v === null || v === undefined || v === '') count++;
+      }
+    }
+    return count;
+  });
+
+  registry.register('COUNTIF', (args) => {
+    if (args.length < 2) return FormulaError.VALUE;
+    const range = flattenRange(args[0]);
+    const matcher = buildMatcher(args[1]);
+    let count = 0;
+    for (const v of range) {
+      if (matcher(v)) count++;
+    }
+    return count;
+  });
+
+  registry.register('COUNTIFS', (args) => {
+    if (args.length < 2 || args.length % 2 !== 0) return FormulaError.VALUE;
+    const pairs: Array<{ range: CellValueType[]; matcher: (v: CellValueType) => boolean }> = [];
+    for (let i = 0; i < args.length; i += 2) {
+      pairs.push({ range: flattenRange(args[i]), matcher: buildMatcher(args[i + 1]) });
+    }
+    const len = pairs[0].range.length;
+    let count = 0;
+    for (let i = 0; i < len; i++) {
+      let match = true;
+      for (const pair of pairs) {
+        if (i >= pair.range.length || !pair.matcher(pair.range[i])) { match = false; break; }
+      }
+      if (match) count++;
+    }
+    return count;
+  });
+
+  registry.register('AVERAGEIFS', (args) => {
+    if (args.length < 3 || args.length % 2 === 0) return FormulaError.VALUE;
+    const avgRange = flattenRange(args[0]);
+    const pairs: Array<{ range: CellValueType[]; matcher: (v: CellValueType) => boolean }> = [];
+    for (let i = 1; i < args.length; i += 2) {
+      pairs.push({ range: flattenRange(args[i]), matcher: buildMatcher(args[i + 1]) });
+    }
+    let sum = 0, count = 0;
+    for (let i = 0; i < avgRange.length; i++) {
+      let match = true;
+      for (const pair of pairs) {
+        if (i >= pair.range.length || !pair.matcher(pair.range[i])) { match = false; break; }
+      }
+      if (match && typeof avgRange[i] === 'number') { sum += avgRange[i] as number; count++; }
+    }
+    if (count === 0) return FormulaError.DIV0;
+    return sum / count;
+  });
+
   registry.register('SUMPRODUCT', (args) => {
     if (args.length < 1) return FormulaError.VALUE;
     // All ranges must be same size

@@ -465,3 +465,92 @@ export class PasteSpecialCommand implements EditCommand {
     }
   }
 }
+
+// ── MoveRange ────────────────────────────────────────────────────────────────
+
+export class MoveRangeCommand implements EditCommand {
+  description = 'Move cells';
+  private savedSource: Array<{ col: number; row: number; data: CellData }> = [];
+  private savedDest: Array<{ col: number; row: number; data: CellData }> = [];
+
+  constructor(
+    private sheetName: string,
+    private from: CellRange,
+    private toCol: number,
+    private toRow: number,
+  ) {}
+
+  execute(model: SpreadsheetModel): void {
+    const sheet = model.getSheetByName(this.sheetName);
+    if (!sheet) return;
+    this.savedSource = [];
+    this.savedDest = [];
+
+    const rows = this.from.endRow - this.from.startRow + 1;
+    const cols = this.from.endCol - this.from.startCol + 1;
+
+    // Save originals
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const sc = this.from.startCol + c;
+        const sr = this.from.startRow + r;
+        const dc = this.toCol + c;
+        const dr = this.toRow + r;
+        this.savedSource.push({ col: sc, row: sr, data: { ...sheet.getCell(sc, sr) } });
+        this.savedDest.push({ col: dc, row: dr, data: { ...sheet.getCell(dc, dr) } });
+      }
+    }
+
+    // Copy source → dest, clear source
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const sc = this.from.startCol + c;
+        const sr = this.from.startRow + r;
+        const dc = this.toCol + c;
+        const dr = this.toRow + r;
+        const srcData = this.savedSource.find((s) => s.col === sc && s.row === sr)!.data;
+        sheet.setCell(dc, dr, { ...srcData });
+        sheet.setCell(sc, sr, {
+          rawValue: null, formula: null, computedValue: null,
+          styleId: null, mergeColSpan: 1, mergeRowSpan: 1, mergedInto: null,
+        });
+      }
+    }
+  }
+
+  undo(model: SpreadsheetModel): void {
+    const sheet = model.getSheetByName(this.sheetName);
+    if (!sheet) return;
+    for (const saved of this.savedSource) sheet.setCell(saved.col, saved.row, saved.data);
+    for (const saved of this.savedDest) sheet.setCell(saved.col, saved.row, saved.data);
+  }
+}
+
+// ── SetComment ───────────────────────────────────────────────────────────────
+
+export class SetCommentCommand implements EditCommand {
+  description = 'Set comment';
+  private oldComment: string | undefined;
+
+  constructor(
+    private sheetName: string,
+    private col: number,
+    private row: number,
+    private comment: string,
+  ) {}
+
+  execute(model: SpreadsheetModel): void {
+    const sheet = model.getSheetByName(this.sheetName);
+    if (!sheet) return;
+    const cell = sheet.getCell(this.col, this.row);
+    this.oldComment = cell.comment;
+    sheet.setCell(this.col, this.row, { ...cell, comment: this.comment || undefined });
+  }
+
+  undo(model: SpreadsheetModel): void {
+    const sheet = model.getSheetByName(this.sheetName);
+    if (!sheet) return;
+    const cell = sheet.getCell(this.col, this.row);
+    sheet.setCell(this.col, this.row, { ...cell, comment: this.oldComment });
+  }
+}

@@ -14,14 +14,22 @@ export class CanvasRenderer {
   viewport: ViewportCalculator;
   scrollManager: ScrollManager;
   private rafId: number | null = null;
+  private selectionRafId: number | null = null;
   private dpr: number;
+
+  /** Offscreen canvas caching the grid+cells layer (everything except selection) */
+  private offscreenCanvas: OffscreenCanvas | null = null;
+  private offscreenCtx: OffscreenCanvasRenderingContext2D | null = null;
+  private offscreenValid = false;
 
   constructor(
     canvas: HTMLCanvasElement,
     private state: WebviewState,
   ) {
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not get 2D rendering context from canvas');
+    this.ctx = ctx;
     this.dpr = window.devicePixelRatio || 1;
 
     this.gridLayer = new GridLayer();
@@ -33,7 +41,8 @@ export class CanvasRenderer {
 
   /** Resize canvas to fill container */
   resize(): void {
-    const container = this.canvas.parentElement!;
+    const container = this.canvas.parentElement;
+    if (!container) return;
     const rect = container.getBoundingClientRect();
     const w = rect.width;
     const h = rect.height;
@@ -43,6 +52,11 @@ export class CanvasRenderer {
     this.canvas.height = h * this.dpr;
     this.canvas.style.width = w + 'px';
     this.canvas.style.height = h + 'px';
+
+    // Recreate offscreen canvas to match new size
+    this.offscreenCanvas = new OffscreenCanvas(w * this.dpr, h * this.dpr);
+    this.offscreenCtx = this.offscreenCanvas.getContext('2d') as OffscreenCanvasRenderingContext2D;
+    this.offscreenValid = false;
 
     this.scrollManager.setCanvasSize(w, h);
     this.markDirty();
@@ -60,14 +74,58 @@ export class CanvasRenderer {
     this.viewport.updateRowHeights(sheet.rowHeights);
   }
 
+  /** Full redraw: grid + cells + selection */
   markDirty(): void {
+    this.offscreenValid = false;
     if (this.rafId === null) {
       this.rafId = requestAnimationFrame(() => this.render());
     }
   }
 
+  /**
+   * Light redraw: only re-composite the selection layer on top of the cached
+   * grid+cells image. Use this when only the selection has changed (e.g. arrow
+   * key navigation) to avoid redrawing all cells every keystroke.
+   */
+  markSelectionDirty(): void {
+    if (this.offscreenValid && this.selectionRafId === null) {
+      this.selectionRafId = requestAnimationFrame(() => this.renderSelectionOnly());
+    } else {
+      // Fall back to full redraw if background isn't cached yet
+      this.markDirty();
+    }
+  }
+
+  private renderSelectionOnly(): void {
+    this.selectionRafId = null;
+    if (!this.offscreenValid || !this.offscreenCanvas) {
+      this.render();
+      return;
+    }
+
+    const ctx = this.ctx;
+    const w = this.canvas.width / this.dpr;
+    const h = this.canvas.height / this.dpr;
+
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    // Blit cached background
+    ctx.drawImage(this.offscreenCanvas, 0, 0, w, h, 0, 0, w, h);
+
+    const sheet = this.state.activeSheet;
+    if (!sheet) return;
+    const scrollX = this.scrollManager.scrollX;
+    const scrollY = this.scrollManager.scrollY;
+
+    // Re-draw headers on top (so selection highlight in header shows correctly)
+    const range = this.viewport.getVisibleRange(scrollX, scrollY, w, h);
+    this.gridLayer.drawHeaders(ctx, this.viewport, range, scrollX, scrollY, w, h, sheet.frozenRows, sheet.frozenCols);
+
+    this.selectionLayer.draw(ctx, this.viewport, scrollX, scrollY, this.state, sheet.frozenRows, sheet.frozenCols);
+  }
+
   private render(): void {
     this.rafId = null;
+    this.selectionRafId = null; // cancel any pending selection-only redraw
     const ctx = this.ctx;
     const w = this.canvas.width / this.dpr;
     const h = this.canvas.height / this.dpr;
@@ -214,6 +272,13 @@ export class CanvasRenderer {
       frozenRows,
       frozenCols,
     );
+
+    // Cache background (grid + cells) before drawing selection
+    if (this.offscreenCanvas && this.offscreenCtx) {
+      this.offscreenCtx.setTransform(1, 0, 0, 1, 0, 0);
+      this.offscreenCtx.drawImage(this.canvas, 0, 0);
+      this.offscreenValid = true;
+    }
 
     // Layer 3: Selection highlight
     this.selectionLayer.draw(

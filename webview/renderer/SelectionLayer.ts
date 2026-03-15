@@ -44,11 +44,20 @@ export class SelectionLayer {
     ctx.lineWidth = 2;
     ctx.strokeRect(x1, y1, w, h);
 
-    // Draw active cell (thicker border)
+    // Draw active cell (thicker border) — span the full merge area if merged
     const activeX = cellScreenX(state.selectedCol);
     const activeY = cellScreenY(state.selectedRow);
-    const activeW = viewport.colWidth(state.selectedCol);
-    const activeH = viewport.rowHeight(state.selectedRow);
+    const activeCell = state.getCell(state.selectedCol, state.selectedRow);
+    const mergeColSpan = activeCell?.mergeColSpan ?? 1;
+    const mergeRowSpan = activeCell?.mergeRowSpan ?? 1;
+    let activeW = 0;
+    for (let c = state.selectedCol; c < state.selectedCol + mergeColSpan; c++) {
+      activeW += viewport.colWidth(c);
+    }
+    let activeH = 0;
+    for (let r = state.selectedRow; r < state.selectedRow + mergeRowSpan; r++) {
+      activeH += viewport.rowHeight(r);
+    }
 
     ctx.strokeStyle = this.activeCellBorder;
     ctx.lineWidth = 2;

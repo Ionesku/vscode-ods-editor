@@ -64,7 +64,9 @@ export type WebviewToExtMessage =
     }
   | { type: 'deleteNamedRange'; name: string }
   | { type: 'setDataValidation'; sheet: string; validation: DataValidation }
-  | { type: 'removeDataValidation'; sheet: string; id: string };
+  | { type: 'removeDataValidation'; sheet: string; id: string }
+  | { type: 'moveRange'; sheet: string; fromRange: CellRange; toCol: number; toRow: number }
+  | { type: 'setComment'; sheet: string; col: number; row: number; comment: string };
 
 export interface PasteCell {
   col: number; // offset from paste origin
@@ -85,8 +87,14 @@ export interface ConditionalFormatRule {
     | 'notContains'
     | 'between'
     | 'empty'
-    | 'notEmpty';
+    | 'notEmpty'
+    | 'colorScale'
+    | 'dataBar';
   value1: string;
   value2?: string; // for 'between'
   style: { backgroundColor?: string; textColor?: string; bold?: boolean; italic?: boolean };
+  /** For colorScale: minColor, midColor (optional), maxColor (hex strings) */
+  colorScaleColors?: { min: string; mid?: string; max: string };
+  /** For dataBar: fill color */
+  dataBarColor?: string;
 }

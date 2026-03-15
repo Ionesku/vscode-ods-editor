@@ -14,22 +14,29 @@ export interface ClipboardActions {
   hasClipboard(): boolean;
 }
 
+export interface CommentActions {
+  open(col: number, row: number): void;
+}
+
 export class ContextMenu {
   private el: HTMLElement;
   private state: WebviewState;
   private renderer: CanvasRenderer;
   private clipboard: ClipboardActions | null = null;
+  private commentActions: CommentActions | null = null;
 
   constructor(
     el: HTMLElement,
     state: WebviewState,
     renderer: CanvasRenderer,
     clipboard?: ClipboardActions,
+    commentActions?: CommentActions,
   ) {
     this.el = el;
     this.state = state;
     this.renderer = renderer;
     this.clipboard = clipboard ?? null;
+    this.commentActions = commentActions ?? null;
 
     // Close on click outside
     document.addEventListener('click', () => this.hide());
@@ -75,9 +82,17 @@ export class ContextMenu {
       items.push({ label: '', action: () => {}, separator: true });
       items.push({
         label: 'Paste Values Only  (Ctrl+Shift+V)',
-        action: () => this.clipboard!.pasteValuesOnly(),
+        action: () => this.clipboard?.pasteValuesOnly(),
       });
-      items.push({ label: 'Paste Formats Only', action: () => this.clipboard!.pasteFormatsOnly() });
+      items.push({ label: 'Paste Formats Only', action: () => this.clipboard?.pasteFormatsOnly() });
+    }
+
+    if (this.commentActions) {
+      items.push({ label: '', action: () => {}, separator: true });
+      items.push({
+        label: 'Edit Comment',
+        action: () => this.commentActions?.open(range.startCol, range.startRow),
+      });
     }
 
     this.el.innerHTML = '';

@@ -2,9 +2,9 @@ import { SpreadsheetModel } from '../model/SpreadsheetModel';
 import { SheetModel, DEFAULT_COL_WIDTH, DEFAULT_ROW_HEIGHT } from '../model/SheetModel';
 import { CellData, CellStyle, CellValue } from '../model/types';
 
-/** Convert pixels to centimetres (ODS unit), rounded to 4 decimal places */
+/** Convert pixels to centimetres (ODS unit), rounded to 6 decimal places */
 function pxToCm(px: number): string {
-  return (px / 37.795275591).toFixed(4) + 'cm';
+  return (px / 37.795275591).toFixed(6) + 'cm';
 }
 
 export class ContentXmlSerializer {
@@ -88,6 +88,7 @@ export class ContentXmlSerializer {
     if (style.fontSize) textParts.push(`fo:font-size="${style.fontSize}pt"`);
     if (style.fontFamily) textParts.push(`style:font-name="${esc(style.fontFamily)}"`);
     if (style.underline) textParts.push('style:text-underline-style="solid"');
+    if (style.strikethrough) textParts.push('style:text-line-through-style="solid"');
     if (textParts.length > 0) {
       xml += `\n      <style:text-properties ${textParts.join(' ')}/>`;
     }
@@ -239,8 +240,15 @@ export class ContentXmlSerializer {
     const attrStr = attrs.length > 0 ? ' ' + attrs.join(' ') : '';
     const displayValue = this.formatDisplayValue(value);
 
+    const commentXml = cell.comment
+      ? `<office:annotation><text:p>${esc(cell.comment)}</text:p></office:annotation>`
+      : '';
+
     if (displayValue !== null) {
-      return `\n          <table:table-cell${attrStr}><text:p>${esc(displayValue)}</text:p></table:table-cell>`;
+      return `\n          <table:table-cell${attrStr}>${commentXml}<text:p>${esc(displayValue)}</text:p></table:table-cell>`;
+    }
+    if (commentXml) {
+      return `\n          <table:table-cell${attrStr}>${commentXml}</table:table-cell>`;
     }
     return `\n          <table:table-cell${attrStr}/>`;
   }

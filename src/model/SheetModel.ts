@@ -93,7 +93,8 @@ export class SheetModel {
       updated.styleId === null &&
       updated.mergeColSpan === 1 &&
       updated.mergeRowSpan === 1 &&
-      updated.mergedInto === null
+      updated.mergedInto === null &&
+      !updated.comment
     ) {
       this.cells.delete(key);
     } else {

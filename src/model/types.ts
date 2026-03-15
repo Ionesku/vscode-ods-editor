@@ -48,6 +48,7 @@ export interface CellData {
   mergeColSpan: number;
   mergeRowSpan: number;
   mergedInto: CellAddress | null;
+  comment?: string;
 }
 
 export function createEmptyCell(): CellData {
@@ -77,6 +78,7 @@ export interface CellStyle {
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
+  strikethrough?: boolean;
   textColor?: string;
   backgroundColor?: string;
   horizontalAlign?: 'left' | 'center' | 'right';

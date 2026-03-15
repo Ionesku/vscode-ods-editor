@@ -19,6 +19,7 @@ export class WebviewState {
   sheets: SheetState[] = [];
   styles: Map<string, CellStyle> = new Map();
   activeSheetIndex = 0;
+  functionNames: string[] = [];
 
   // Selection
   selectedCol = 0;
@@ -67,6 +68,7 @@ export class WebviewState {
     }>;
     styles: Record<string, CellStyle>;
     activeSheetIndex: number;
+    functionNames?: string[];
   }): void {
     const DEFAULT_COL_WIDTH = 80;
     const DEFAULT_ROW_HEIGHT = 24;
@@ -98,6 +100,7 @@ export class WebviewState {
     });
     this.styles = new Map(Object.entries(data.styles));
     this.activeSheetIndex = data.activeSheetIndex;
+    if (data.functionNames) this.functionNames = data.functionNames;
   }
 
   getCell(col: number, row: number): CellData {
@@ -136,6 +139,17 @@ export class WebviewState {
       if (col < rule.range.startCol || col > rule.range.endCol) continue;
       if (row < rule.range.startRow || row > rule.range.endRow) continue;
 
+      if (rule.condition === 'colorScale') {
+        const bg = this.computeColorScaleBackground(rule, col, row);
+        if (bg) return { ...(baseStyle ?? { id: '' }), backgroundColor: bg, id: baseStyle?.id ?? '' };
+        continue;
+      }
+
+      if (rule.condition === 'dataBar') {
+        // dataBar is drawn as an overlay in CellLayer — skip style modification here
+        continue;
+      }
+
       const val = cell.computedValue ?? cell.rawValue;
       if (evaluateCondition(rule, val)) {
         // Merge conditional style on top of base style
@@ -144,6 +158,66 @@ export class WebviewState {
     }
 
     return baseStyle;
+  }
+
+  /** Get data bar fill width (0-1) for a cell, or null if no data bar rule applies */
+  getDataBarRatio(col: number, row: number): { ratio: number; color: string } | null {
+    const sheet = this.activeSheet;
+    if (!sheet) return null;
+    for (const rule of sheet.conditionalFormats) {
+      if (rule.condition !== 'dataBar') continue;
+      if (col < rule.range.startCol || col > rule.range.endCol) continue;
+      if (row < rule.range.startRow || row > rule.range.endRow) continue;
+      const cell = this.getCell(col, row);
+      const val = cell.computedValue ?? cell.rawValue;
+      if (typeof val !== 'number') return null;
+      const { min, max } = this.getRangeMinMax(rule);
+      if (max === min) return { ratio: 0.5, color: rule.dataBarColor ?? '#4472C4' };
+      const ratio = Math.max(0, Math.min(1, (val - min) / (max - min)));
+      return { ratio, color: rule.dataBarColor ?? '#4472C4' };
+    }
+    return null;
+  }
+
+  private computeColorScaleBackground(
+    rule: ConditionalFormatRule,
+    col: number,
+    row: number,
+  ): string | null {
+    const cell = this.getCell(col, row);
+    const val = cell.computedValue ?? cell.rawValue;
+    if (typeof val !== 'number' || !rule.colorScaleColors) return null;
+
+    const { min, max } = this.getRangeMinMax(rule);
+    if (max === min) return rule.colorScaleColors.min;
+
+    const t = (val - min) / (max - min); // 0..1
+    const colors = rule.colorScaleColors;
+
+    if (colors.mid) {
+      // 3-color scale: min → mid → max
+      if (t <= 0.5) {
+        return interpolateColor(colors.min, colors.mid, t * 2);
+      } else {
+        return interpolateColor(colors.mid, colors.max, (t - 0.5) * 2);
+      }
+    }
+    return interpolateColor(colors.min, colors.max, t);
+  }
+
+  private getRangeMinMax(rule: ConditionalFormatRule): { min: number; max: number } {
+    const sheet = this.activeSheet;
+    let min = Infinity, max = -Infinity;
+    if (!sheet) return { min: 0, max: 1 };
+    for (let r = rule.range.startRow; r <= rule.range.endRow; r++) {
+      for (let c = rule.range.startCol; c <= rule.range.endCol; c++) {
+        const cell = this.getCell(c, r);
+        const v = cell.computedValue ?? cell.rawValue;
+        if (typeof v === 'number') { min = Math.min(min, v); max = Math.max(max, v); }
+      }
+    }
+    if (!isFinite(min)) return { min: 0, max: 1 };
+    return { min, max };
   }
 }
 
@@ -252,4 +326,22 @@ function evaluateCondition(rule: ConditionalFormatRule, val: unknown): boolean {
     default:
       return false;
   }
+}
+
+/** Linear interpolation between two hex colors, t in [0,1] */
+function interpolateColor(hex1: string, hex2: string, t: number): string {
+  const parse = (h: string): [number, number, number] => {
+    const c = h.replace('#', '');
+    return [
+      parseInt(c.substring(0, 2), 16),
+      parseInt(c.substring(2, 4), 16),
+      parseInt(c.substring(4, 6), 16),
+    ];
+  };
+  const [r1, g1, b1] = parse(hex1);
+  const [r2, g2, b2] = parse(hex2);
+  const r = Math.round(r1 + (r2 - r1) * t);
+  const g = Math.round(g1 + (g2 - g1) * t);
+  const b = Math.round(b1 + (b2 - b1) * t);
+  return '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
 }

@@ -6,6 +6,7 @@ import { registerLookupFunctions } from './lookup';
 import { registerTextFunctions } from './text';
 import { registerStatisticalFunctions } from './statistical';
 import { registerDateTimeFunctions } from './datetime';
+import { registerFinancialFunctions } from './financial';
 
 export type FormulaFunction = (args: FormulaValue[], evaluator: Evaluator) => FormulaValue;
 
@@ -47,5 +48,6 @@ export function createDefaultRegistry(): FunctionRegistry {
   registerTextFunctions(registry);
   registerStatisticalFunctions(registry);
   registerDateTimeFunctions(registry);
+  registerFinancialFunctions(registry);
   return registry;
 }

@@ -1,7 +1,9 @@
 import * as vscode from 'vscode';
 import { OdsEditorProvider } from './odsEditorProvider';
 import { OdsWriter } from './ods/OdsWriter';
+import { OdsReader } from './ods/OdsReader';
 import { SpreadsheetModel } from './model/SpreadsheetModel';
+import { modelToCsv, csvToModel } from './csv/CsvSerializer';
 
 interface Template {
   label: string;
@@ -472,6 +474,85 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.window.registerCustomEditorProvider('odsEditor.spreadsheet', provider, {
       webviewOptions: { retainContextWhenHidden: true },
       supportsMultipleEditorsPerDocument: false,
+    }),
+  );
+
+  // ── Export active sheet to CSV ───────────────────────────────────────────
+  context.subscriptions.push(
+    vscode.commands.registerCommand('odsEditor.exportCsv', async () => {
+      // Find the active ODS file
+      const tabInput = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
+      let fileUri: vscode.Uri | undefined;
+      if (tabInput && typeof tabInput === 'object' && 'uri' in tabInput) {
+        fileUri = (tabInput as { uri: vscode.Uri }).uri;
+      }
+      if (!fileUri || !fileUri.path.endsWith('.ods')) {
+        vscode.window.showErrorMessage('Open an .ods file first to export as CSV.');
+        return;
+      }
+
+      const saveUri = await vscode.window.showSaveDialog({
+        defaultUri: vscode.Uri.file(fileUri.path.replace(/\.ods$/, '.csv')),
+        filters: { 'CSV Files': ['csv'] },
+        title: 'Export as CSV',
+      });
+      if (!saveUri) return;
+
+      try {
+        const odsData = await vscode.workspace.fs.readFile(fileUri);
+        const reader = new OdsReader();
+        const model = await reader.read(Buffer.from(odsData));
+        const csv = modelToCsv(model);
+        await vscode.workspace.fs.writeFile(saveUri, Buffer.from(csv, 'utf8'));
+        vscode.window.showInformationMessage(`Exported to ${saveUri.fsPath}`);
+      } catch (err) {
+        vscode.window.showErrorMessage(`Export failed: ${err}`);
+      }
+    }),
+  );
+
+  // ── Import CSV as ODS ────────────────────────────────────────────────────
+  context.subscriptions.push(
+    vscode.commands.registerCommand('odsEditor.importCsv', async (uri?: vscode.Uri) => {
+      let csvUri: vscode.Uri | undefined = uri;
+      if (!csvUri) {
+        const uris = await vscode.window.showOpenDialog({
+          canSelectMany: false,
+          filters: { 'CSV Files': ['csv'], 'Text Files': ['txt'] },
+          title: 'Import CSV',
+        });
+        csvUri = uris?.[0];
+      }
+      if (!csvUri) return;
+
+      let folderUri: vscode.Uri;
+      if (vscode.workspace.workspaceFolders?.length) {
+        folderUri = vscode.workspace.workspaceFolders[0].uri;
+      } else {
+        folderUri = vscode.Uri.joinPath(csvUri, '..');
+      }
+
+      const csvName = csvUri.path.split('/').pop() ?? 'import';
+      const suggestedName = csvName.replace(/\.csv$/i, '') + '.ods';
+
+      const name = await vscode.window.showInputBox({
+        prompt: 'Name for the new ODS file',
+        value: suggestedName,
+      });
+      if (!name) return;
+
+      const odsUri = vscode.Uri.joinPath(folderUri, name.endsWith('.ods') ? name : name + '.ods');
+      try {
+        const csvData = await vscode.workspace.fs.readFile(csvUri);
+        const sheetName = suggestedName.replace('.ods', '');
+        const model = csvToModel(new TextDecoder().decode(csvData), sheetName);
+        const writer = new OdsWriter();
+        const odsData = await writer.write(model);
+        await vscode.workspace.fs.writeFile(odsUri, odsData);
+        await vscode.commands.executeCommand('vscode.openWith', odsUri, 'odsEditor.spreadsheet');
+      } catch (err) {
+        vscode.window.showErrorMessage(`Import failed: ${err}`);
+      }
     }),
   );
 

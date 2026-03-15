@@ -16,9 +16,11 @@ Full-featured OpenDocument Spreadsheet (.ods) editor, built natively into VSCode
 ### Cell Editing
 - **Direct input** -- click a cell and start typing, or press `F2` / `Enter` to edit
 - **Formula bar** -- edit cell value or formula in the top bar
-- **Formula support** -- `=SUM(A1:A10)`, `=IF(A1>0, "yes", "no")`, `=VLOOKUP(...)`, and 50+ functions
+- **Formula support** -- `=SUM(A1:A10)`, `=IF(A1>0, "yes", "no")`, `=VLOOKUP(...)`, and 80+ functions
+- **Formula autocomplete** -- type `=` then a function name prefix; a dropdown appears with matching functions; navigate with `↑`/`↓`, accept with `Tab` or `Enter`
 - **Cross-sheet references** -- `=Sheet2.A1` or `=Sheet2.A1:B10` (ODS dot-notation)
 - **Auto-fill** -- drag the fill handle (small square at bottom-right of selection) to extend series: numbers, letters, IP addresses, repeating patterns
+- **Cell drag-to-move** -- hold `Alt` and drag a selection to move its contents to a new location
 - **Clipboard** -- `Ctrl+C`, `Ctrl+V`, `Ctrl+X` with tab-separated format (compatible with Excel/Google Sheets paste)
 
 ### Selection & Navigation
@@ -35,6 +37,7 @@ Full-featured OpenDocument Spreadsheet (.ods) editor, built natively into VSCode
 | Button | Action |
 |--------|--------|
 | **B** / **I** / **U** | Bold, Italic, Underline |
+| **S̶** (Strikethrough) | Strikethrough text |
 | Color pickers | Text color / Background color |
 | Alignment icons | Left / Center / Right align |
 | Borders dropdown | All borders, Outer, None, Top/Bottom/Left/Right |
@@ -93,16 +96,29 @@ Toggle wrap text to make cell content break into multiple lines within the cell.
 ### Conditional Formatting
 1. Select the range of cells to apply the rule to
 2. Click the conditional format button (colored squares icon)
-3. Choose a condition:
+3. Choose a condition type:
+
+   **Value-based rules:**
    - **Greater than** / **Less than** -- compare cell value to a number
    - **Equals** / **Not equals** -- exact match
    - **Contains** / **Not contains** -- substring match
    - **Between** -- value is in a range (two values)
    - **Is empty** / **Is not empty** -- null/blank detection
-4. Set the formatting style: background color, text color, bold, italic
-5. Click **Apply** -- the rule is saved and cells update immediately
-6. Existing rules are listed at the bottom of the dialog with a delete button (x)
-7. Multiple rules can stack; first matching rule wins
+   - Set the formatting style: background color, text color, bold, italic
+
+   **Visual scales:**
+   - **Color Scale** -- cells are shaded with a gradient between a min and max color (optional mid-point color); color is proportional to the cell value within the range
+   - **Data Bar** -- a colored bar fills each cell proportionally to its value; bar length represents relative magnitude
+
+4. Click **Apply** -- the rule is saved and cells update immediately
+5. Existing rules are listed at the bottom of the dialog with a delete button (×)
+6. Multiple rules can stack; first matching rule wins
+
+### Cell Comments
+- **Add/edit comment**: right-click a cell > **Edit Comment**, type in the dialog, click **Save**
+- **Delete comment**: open the comment dialog > **Delete**
+- **View comment**: hover over a cell with a red triangle indicator (top-right corner) to see a tooltip
+- Comments are saved in the `.ods` file and are compatible with LibreOffice/Google Sheets
 
 ### Sort
 1. Select a range of cells
@@ -130,6 +146,21 @@ When multiple cells are selected, the bottom-right shows:
 - **Sum** -- total of all numeric values
 - **Avg** -- average
 - **Count** -- number of non-empty cells
+
+---
+
+## CSV Import / Export
+
+### Export to CSV
+Run from the command palette (`Ctrl+Shift+P`) > **ODS: Export Active Sheet to CSV**
+
+Saves the currently active sheet as a `.csv` file (RFC-4180 compliant). Fields containing commas, quotes, or newlines are automatically quoted.
+
+### Import from CSV
+- Right-click any `.csv` file in the Explorer > **Import CSV as ODS**
+- Or run `Ctrl+Shift+P` > **ODS: Import CSV as ODS**
+
+Creates a new `.ods` file in the same directory and opens it in the editor. Numbers are auto-detected and stored as numeric values.
 
 ---
 
@@ -161,9 +192,25 @@ Custom templates store the complete `.ods` file (data, styles, formulas, formatt
 
 ## Formulas
 
+### Formula Autocomplete
+When typing a formula starting with `=`, a dropdown appears showing matching function names as you type. Use `↑`/`↓` to navigate, `Tab` or `Enter` to insert the function (cursor is placed inside the parentheses), `Esc` to dismiss.
+
 ### Supported Functions
 
-**Math:** `SUM`, `AVERAGE`, `MIN`, `MAX`, `COUNT`, `COUNTA`, `ABS`, `ROUND`, `ROUNDUP`, `ROUNDDOWN`, `CEILING`, `FLOOR`, `MOD`, `POWER`, `SQRT`, `PI`, `RAND`, `INT`, `SIGN`, `SUMIF`, `COUNTIF`, `AVERAGEIF`, `SUMPRODUCT`
+**Math & Statistics:** `SUM`, `SUMIF`, `SUMIFS`, `SUMPRODUCT`, `AVERAGE`, `AVERAGEIF`, `AVERAGEIFS`, `MIN`, `MAX`, `COUNT`, `COUNTA`, `COUNTBLANK`, `COUNTIF`, `COUNTIFS`, `ABS`, `ROUND`, `ROUNDUP`, `ROUNDDOWN`, `CEILING`, `FLOOR`, `MOD`, `POWER`, `SQRT`, `PI`, `RAND`, `RANDBETWEEN`, `INT`, `SIGN`, `LOG`, `LOG10`, `LN`, `EXP`
+
+**Financial:** `PMT`, `PV`, `FV`, `NPV`, `IRR`, `RATE`, `NPER`, `SLN`
+
+| Function | Description |
+|----------|-------------|
+| `PMT(rate, nper, pv, [fv], [type])` | Periodic payment for a loan |
+| `PV(rate, nper, pmt, [fv], [type])` | Present value of an investment |
+| `FV(rate, nper, pmt, [pv], [type])` | Future value of an investment |
+| `NPV(rate, value1, ...)` | Net present value of cash flows |
+| `IRR(values, [guess])` | Internal rate of return |
+| `RATE(nper, pmt, pv, [fv], [type], [guess])` | Interest rate per period |
+| `NPER(rate, pmt, pv, [fv], [type])` | Number of payment periods |
+| `SLN(cost, salvage, life)` | Straight-line depreciation |
 
 **Text:** `LEN`, `LEFT`, `RIGHT`, `MID`, `UPPER`, `LOWER`, `TRIM`, `CONCATENATE`, `SUBSTITUTE`, `FIND`, `SEARCH`, `REPLACE`, `REPT`, `TEXT`, `VALUE`, `EXACT`, `T`
 
@@ -203,6 +250,7 @@ Custom templates store the complete `.ods` file (data, styles, formulas, formatt
 | `End` | Go to last used cell in current row |
 | `Ctrl+End` | Go to last used cell in sheet |
 | `Page Up` / `Page Down` | Scroll one page up / down |
+| `Alt`+drag | Move selection to new location |
 | Address bar + `Enter` | Navigate to typed address (e.g. `B5`, `A1:C10`) |
 
 ---

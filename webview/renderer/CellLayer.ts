@@ -122,8 +122,31 @@ export class CellLayer {
 
     if (style) this.drawBorders(ctx, x, y, w, h, style);
 
+    // Data bar overlay
+    const dataBar = state.getDataBarRatio(c, r);
+    if (dataBar && dataBar.ratio > 0) {
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = dataBar.color;
+      ctx.fillRect(x, y, Math.max(2, w * dataBar.ratio), h);
+      ctx.restore();
+    }
+
     const display = state.getCellDisplay(c, r);
     if (display) this.drawCellText(ctx, x, y, w, h, display, cell.rawValue, style);
+
+    // Comment indicator: small red triangle in top-right corner
+    if (cell.comment) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(x + w - 6, y);
+      ctx.lineTo(x + w, y);
+      ctx.lineTo(x + w, y + 6);
+      ctx.closePath();
+      ctx.fillStyle = '#e53935';
+      ctx.fill();
+      ctx.restore();
+    }
   }
 
   /** Measure text width for auto-fit */
@@ -226,18 +249,26 @@ export class CellLayer {
     if (style?.wrapText && maxWidth > 0) {
       this.drawWrappedText(ctx, text, textX, y, maxWidth, h, textAlign, font, style);
     } else {
-      if (style?.underline) {
+      if (style?.underline || style?.strikethrough) {
         const textWidth = this.textMeasurer.measureWidth(text, font);
         let lineX = textX;
         if (textAlign === 'center') lineX -= textWidth / 2;
         else if (textAlign === 'right') lineX -= textWidth;
 
-        ctx.beginPath();
-        ctx.moveTo(lineX, textY + 8);
-        ctx.lineTo(lineX + textWidth, textY + 8);
-        ctx.strokeStyle = ctx.fillStyle;
+        ctx.strokeStyle = ctx.fillStyle as string;
         ctx.lineWidth = 1;
-        ctx.stroke();
+        if (style?.underline) {
+          ctx.beginPath();
+          ctx.moveTo(lineX, textY + 8);
+          ctx.lineTo(lineX + textWidth, textY + 8);
+          ctx.stroke();
+        }
+        if (style?.strikethrough) {
+          ctx.beginPath();
+          ctx.moveTo(lineX, textY);
+          ctx.lineTo(lineX + textWidth, textY);
+          ctx.stroke();
+        }
       }
       ctx.fillText(text, textX, textY, maxWidth);
     }

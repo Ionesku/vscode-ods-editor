@@ -170,4 +170,5 @@ export interface SerializedModel {
   activeSheetIndex: number;
   metadata: DocumentMetadata;
   namedRanges?: NamedRange[];
+  functionNames?: string[];
 }

@@ -96,6 +96,9 @@ export class ContentXmlParser {
 
         const underline = attr(textProps, 'style:text-underline-style');
         if (underline && underline !== 'none') cellStyle.underline = true;
+
+        const strikethrough = attr(textProps, 'style:text-line-through-style');
+        if (strikethrough && strikethrough !== 'none') cellStyle.strikethrough = true;
       }
 
       if (cellProps) {
@@ -386,6 +389,18 @@ export class ContentXmlParser {
     if (colSpan > 1 || rowSpan > 1) {
       cell.mergeColSpan = colSpan;
       cell.mergeRowSpan = rowSpan;
+    }
+
+    // Comment (office:annotation)
+    const annotation = cellNode['office:annotation'] as XNode | undefined;
+    if (annotation) {
+      const annotationText = annotation['text:p'];
+      if (typeof annotationText === 'string') {
+        cell.comment = annotationText;
+      } else if (typeof annotationText === 'object' && annotationText !== null) {
+        const obj = annotationText as Record<string, unknown>;
+        if ('#text' in obj) cell.comment = String(obj['#text']);
+      }
     }
 
     return cell;

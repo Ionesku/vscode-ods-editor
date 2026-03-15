@@ -24,6 +24,11 @@ export class InputManager {
   private fillDragEndCol = 0;
   private fillDragEndRow = 0;
 
+  // Cell drag-to-move state
+  private isMoveDragging = false;
+  private moveDragTargetCol = 0;
+  private moveDragTargetRow = 0;
+
   constructor(
     canvas: HTMLCanvasElement,
     state: WebviewState,
@@ -83,6 +88,22 @@ export class InputManager {
       }
     }
 
+    // Check for move drag: Alt + mousedown inside current selection body
+    if (e.altKey) {
+      const hit = this.renderer.hitTest(x, y);
+      const range = this.state.selectionRange;
+      if (hit && range &&
+        hit.col >= range.startCol && hit.col <= range.endCol &&
+        hit.row >= range.startRow && hit.row <= range.endRow) {
+        this.isMoveDragging = true;
+        this.moveDragTargetCol = range.startCol;
+        this.moveDragTargetRow = range.startRow;
+        this.canvas.style.cursor = 'move';
+        e.preventDefault();
+        return;
+      }
+    }
+
     // Check for column resize (must check before header click)
     const resizeCol = this.renderer.hitTestColResize(x, y);
     if (resizeCol !== null) {
@@ -136,6 +157,17 @@ export class InputManager {
 
   private handleMouseMove(e: MouseEvent): void {
     const { x, y } = this.getCanvasCoords(e);
+
+    // Handle move drag
+    if (this.isMoveDragging) {
+      const hit = this.renderer.hitTest(x, y);
+      if (hit) {
+        this.moveDragTargetCol = hit.col;
+        this.moveDragTargetRow = hit.row;
+        this.renderer.markSelectionDirty();
+      }
+      return;
+    }
 
     // Handle fill drag
     if (this.isFillDragging) {
@@ -194,6 +226,28 @@ export class InputManager {
   }
 
   private handleMouseUp(): void {
+    // Handle move drag completion
+    if (this.isMoveDragging) {
+      this.isMoveDragging = false;
+      this.canvas.style.cursor = 'cell';
+      const sheet = this.state.activeSheet;
+      const range = this.state.selectionRange;
+      if (sheet && range) {
+        const toCol = this.moveDragTargetCol;
+        const toRow = this.moveDragTargetRow;
+        if (toCol !== range.startCol || toRow !== range.startRow) {
+          messageBridge.postMessage({
+            type: 'moveRange',
+            sheet: sheet.name,
+            fromRange: range,
+            toCol,
+            toRow,
+          });
+        }
+      }
+      return;
+    }
+
     // Handle fill drag completion
     if (this.isFillDragging) {
       this.completeFillDrag();

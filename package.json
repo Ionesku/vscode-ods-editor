@@ -31,6 +31,16 @@
         "command": "odsEditor.saveAsTemplate",
         "title": "Save Current as Template",
         "category": "ODS"
+      },
+      {
+        "command": "odsEditor.exportCsv",
+        "title": "Export Active Sheet as CSV",
+        "category": "ODS"
+      },
+      {
+        "command": "odsEditor.importCsv",
+        "title": "Import CSV as ODS",
+        "category": "ODS"
       }
     ],
     "menus": {
@@ -38,6 +48,11 @@
         {
           "command": "odsEditor.newTable",
           "group": "navigation@10"
+        },
+        {
+          "command": "odsEditor.importCsv",
+          "when": "resourceExtname == .csv",
+          "group": "navigation@11"
         }
       ]
     }
