@@ -2,6 +2,8 @@
 
 [English version](README.md)
 
+![ODS Spreadsheet Editor](image.png)
+
 Полнофункциональный редактор электронных таблиц OpenDocument (.ods), встроенный прямо в VSCode. Никаких сторонних приложений не требуется.
 
 ## Быстрый старт

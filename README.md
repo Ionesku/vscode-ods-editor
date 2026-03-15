@@ -2,6 +2,8 @@
 
 [Русская версия](README.ru.md)
 
+![ODS Spreadsheet Editor](image.png)
+
 Full-featured OpenDocument Spreadsheet (.ods) editor, built natively into VSCode. No external apps required.
 
 ## Quick Start
