@@ -3,6 +3,7 @@ dist/
 *.vsix
 .vscode-test/
 .claude/
+.gitea/
 
 # Test artifacts in root
 *.ods
