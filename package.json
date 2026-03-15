@@ -1,0 +1,76 @@
+{
+  "name": "ods-editor",
+  "displayName": "ODS Spreadsheet Editor",
+  "description": "Full-featured OpenDocument Spreadsheet editor for VSCode",
+  "version": "0.1.0",
+  "publisher": "ods-editor",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "odsEditor.spreadsheet",
+        "displayName": "ODS Spreadsheet Editor",
+        "selector": [
+          { "filenamePattern": "*.ods" }
+        ],
+        "priority": "default"
+      }
+    ],
+    "commands": [
+      {
+        "command": "odsEditor.newTable",
+        "title": "New Table (.ods)",
+        "category": "ODS"
+      },
+      {
+        "command": "odsEditor.saveAsTemplate",
+        "title": "Save Current as Template",
+        "category": "ODS"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "odsEditor.newTable",
+          "group": "navigation@10"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "webpack --mode production",
+    "dev": "webpack --mode development --watch",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test": "npm run test:unit",
+    "lint": "eslint src/ webview/ --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\" \"webview/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"webview/**/*.ts\""
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "css-loader": "^6.10.0",
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.0",
+    "style-loader": "^3.3.4",
+    "ts-loader": "^9.5.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0",
+    "@vitest/coverage-v8": "^1.2.0",
+    "webpack": "^5.90.0",
+    "webpack-cli": "^5.1.0"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^4.3.0",
+    "jszip": "^3.10.0"
+  }
+}
