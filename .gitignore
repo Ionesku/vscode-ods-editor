@@ -6,3 +6,5 @@ dist/
 
 # Test artifacts in root
 *.ods
+
+ROADMAP*.md
