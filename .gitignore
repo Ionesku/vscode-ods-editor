@@ -2,3 +2,7 @@ node_modules/
 dist/
 *.vsix
 .vscode-test/
+.claude/
+
+# Test artifacts in root
+*.ods
