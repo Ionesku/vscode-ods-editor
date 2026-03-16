@@ -1,0 +1,14 @@
+**/.git/**
+**/node_modules/**
+**/src/**
+**/webview/**
+**/test/**
+**/.vscode/**
+**/.claude/**
+**/tsconfig*.json
+**/vitest.config.ts
+**/webpack.config.js
+**/.eslintrc.json
+**/.gitignore
+**/dist/**/*.d.ts
+**/dist/**/*.map
